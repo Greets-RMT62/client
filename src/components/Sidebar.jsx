@@ -15,6 +15,7 @@ import {
   Shield,
   CheckCircle2,
 } from "lucide-react";
+import { useNavigate } from "react-router";
 
 export default function Sidebar({
   chats,
@@ -85,10 +86,16 @@ export default function Sidebar({
   const filteredChats = chats.filter((chat) =>
     chat.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  console.log("🚀 ~ filteredChats:", filteredChats);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
   };
+
+  let access_token = localStorage.getItem("access_token").split(".")[1];
+  let payload = JSON.parse(atob(access_token));
+  const currentUserId = payload.id;
+  const navigate = useNavigate();
 
   return (
     <aside
@@ -205,7 +212,10 @@ export default function Sidebar({
                   <span>Notifications</span>
                 </button>
                 <button
-                  onClick={() => alert("Logout successful!")}
+                  onClick={() => {
+                    localStorage.removeItem("access_token");
+                    navigate("/login");
+                  }}
                   className={`block w-full text-left px-6 py-3 ${
                     isDarkMode ? "hover:bg-gray-700" : "hover:bg-red-50"
                   } transition-all duration-200 flex items-center gap-3 text-red-500`}
@@ -278,13 +288,19 @@ export default function Sidebar({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold truncate">{chat.name}</h3>
+                      <h3 className="font-semibold truncate w-40">
+                        {chat.isGroup
+                          ? chat.name
+                          : chat.UserHasRooms[0].UserId !== currentUserId
+                          ? chat.UserHasRooms[0].User.username
+                          : chat.UserHasRooms[1].User.username}
+                      </h3>
                       {chat.isPinned && (
                         <Zap size={14} className="text-yellow-500" />
                       )}
                       {chat.isGroup && (
                         <span
-                          className={`text-xs px-2 py-1 rounded-full ${
+                          className={`text-xs px-2 py-1 block rounded-full ${
                             isDarkMode
                               ? "bg-purple-900 text-purple-300"
                               : "bg-purple-100 text-purple-600"
@@ -295,7 +311,7 @@ export default function Sidebar({
                       )}
                     </div>
                     <div
-                      className={`text-sm truncate flex items-center gap-1 ${
+                      className={`text-sm truncate w-35 flex items-center gap-1 ${
                         isDarkMode ? "text-gray-400" : "text-gray-500"
                       }`}
                     >

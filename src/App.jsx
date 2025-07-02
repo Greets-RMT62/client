@@ -11,9 +11,23 @@ function Layout() {
   // if (!access_token) {
   // 	return <Navigate to="/login" />;
   // }
+  if (!localStorage.getItem("access_token")) {
+    return <Navigate to="/login" />;
+  }
   return (
     <div>
       {/* <Navbar /> // Jika ada Navbar nantinya */}
+      <Outlet />
+    </div>
+  );
+}
+
+function LoginLayout() {
+  if (localStorage.getItem("access_token")) {
+    return <Navigate to="/chats" />;
+  }
+  return (
+    <div>
       <Outlet />
     </div>
   );
@@ -24,7 +38,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route element={<LoginLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
         <Route element={<Layout />}>
           <Route path="/chats" element={<RoomChat />} />
         </Route>

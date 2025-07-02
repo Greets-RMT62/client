@@ -49,6 +49,7 @@ export default function RoomChat() {
         roomType: userRoom.Room.roomType,
         description: userRoom.Room.description,
         owner: userRoom.Room.Owner,
+        UserHasRooms: userRoom.Room.UserHasRooms,
       }));
 
       setChats(transformedChats);
