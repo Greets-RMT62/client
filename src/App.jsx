@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router";
 import "./App.css";
 import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
 
 function Layout() {
 	// Selama tahap development bisa comment ini dulu sementara
@@ -22,7 +23,7 @@ function App() {
 		<BrowserRouter>
 			<Routes>
 				<Route path="/" element={<LandingPage />} />
-				<Route path="/login" element={<h1>Login page...</h1>} />
+				<Route path="/login" element={<LoginPage />} />
 				<Route element={<Layout />}>
 					<Route path="/chats" element={<h1>Chat page...</h1>} />
 				</Route>
