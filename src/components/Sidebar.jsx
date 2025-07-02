@@ -24,6 +24,9 @@ export default function Sidebar({
   isDarkMode,
   setIsDarkMode,
   USERNAME,
+  isLoading = false,
+  onCreateRoom,
+  onStartPrivateChat,
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [dropdownState, setDropdownState] = useState({
@@ -32,14 +35,6 @@ export default function Sidebar({
     attachDropdown: false,
     chatMenu: false,
   });
-  const [showUserList, setShowUserList] = useState(false);
-  const [users, setUsers] = useState([
-    { id: 1, name: "Alice", avatar: "👩‍💼", status: "online" },
-    { id: 2, name: "Bob", avatar: "👨‍💼", status: "away" },
-    { id: 3, name: "Charlie", avatar: "👨‍💻", status: "online" },
-    { id: 4, name: "Diana", avatar: "👩‍🎨", status: "offline" },
-    { id: 5, name: "Sarah", avatar: "👩‍💻", status: "online" },
-  ]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -50,7 +45,6 @@ export default function Sidebar({
           attachDropdown: false,
           chatMenu: false,
         });
-        setShowUserList(false);
       }
     };
 
@@ -88,86 +82,9 @@ export default function Sidebar({
     }
   };
 
-  const createChat = (isGroup) => {
-    if (isGroup) {
-      const name = prompt(`Enter Group Chat Name:`);
-      if (!name) return;
-
-      const now = new Date();
-      const timestamp = now.toTimeString().slice(0, 5);
-
-      const newChat = {
-        id: Date.now(),
-        name,
-        isGroup,
-        avatar: "🎯",
-        lastSeen: "just created",
-        unreadCount: 0,
-        isPinned: false,
-        messages: [
-          {
-            text: "New chat created.",
-            from: "System",
-            timestamp,
-            avatar: "⚡",
-          },
-        ],
-      };
-
-      setChats((prev) => [...prev, newChat]);
-    } else {
-      setShowUserList((prev) => !prev);
-    }
-  };
-
-  const startPrivateChat = (user) => {
-    const existingChat = chats.find(
-      (chat) => !chat.isGroup && chat.name === user.name
-    );
-
-    if (existingChat) {
-      openChat(existingChat.id);
-    } else {
-      const now = new Date();
-      const timestamp = now.toTimeString().slice(0, 5);
-
-      const newChat = {
-        id: Date.now(),
-        name: user.name,
-        isGroup: false,
-        avatar: user.avatar,
-        lastSeen: user.status,
-        unreadCount: 0,
-        isPinned: false,
-        messages: [
-          { text: "Chat started.", from: "System", timestamp, avatar: "⚡" },
-        ],
-      };
-
-      setChats((prev) => [...prev, newChat]);
-      setActiveChat(newChat);
-    }
-
-    setShowUserList(false);
-    setDropdownState((prev) => ({ ...prev, createDropdown: false }));
-  };
-
   const filteredChats = chats.filter((chat) =>
     chat.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "online":
-        return "bg-green-400";
-      case "away":
-        return "bg-yellow-400";
-      case "offline":
-        return "bg-gray-400";
-      default:
-        return "bg-green-400";
-    }
-  };
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -227,7 +144,13 @@ export default function Sidebar({
                 } border rounded-2xl shadow-2xl z-10 overflow-hidden`}
               >
                 <button
-                  onClick={() => createChat(false)}
+                  onClick={() => {
+                    onStartPrivateChat();
+                    setDropdownState((prev) => ({
+                      ...prev,
+                      createDropdown: false,
+                    }));
+                  }}
                   className={`block w-full text-left px-6 py-3 ${
                     isDarkMode ? "hover:bg-gray-700" : "hover:bg-purple-50"
                   } transition-all duration-200 flex items-center gap-3`}
@@ -236,7 +159,13 @@ export default function Sidebar({
                   <span>Private Chat</span>
                 </button>
                 <button
-                  onClick={() => createChat(true)}
+                  onClick={() => {
+                    onCreateRoom();
+                    setDropdownState((prev) => ({
+                      ...prev,
+                      createDropdown: false,
+                    }));
+                  }}
                   className={`block w-full text-left px-6 py-3 ${
                     isDarkMode ? "hover:bg-gray-700" : "hover:bg-purple-50"
                   } transition-all duration-200 flex items-center gap-3`}
@@ -244,56 +173,6 @@ export default function Sidebar({
                   <Crown size={16} className="text-yellow-500" />
                   <span>Group Chat</span>
                 </button>
-              </div>
-            )}
-
-            {showUserList && (
-              <div
-                className={`absolute right-0 mt-2 w-64 ${
-                  isDarkMode
-                    ? "bg-gray-800 border-gray-700"
-                    : "bg-white/90 backdrop-blur-xl border-white/20"
-                } border rounded-2xl shadow-2xl z-20 overflow-hidden`}
-              >
-                <div
-                  className={`p-4 text-sm ${
-                    isDarkMode
-                      ? "text-gray-300 border-gray-700"
-                      : "text-gray-600 border-gray-100"
-                  } border-b font-medium`}
-                >
-                  Select User to Chat
-                </div>
-                {users.map((user) => (
-                  <button
-                    key={user.id}
-                    onClick={() => startPrivateChat(user)}
-                    className={`block w-full text-left px-6 py-3 ${
-                      isDarkMode ? "hover:bg-gray-700" : "hover:bg-purple-50"
-                    } transition-all duration-200 flex items-center gap-3`}
-                  >
-                    <div className="relative">
-                      <span className="text-2xl">{user.avatar}</span>
-                      <div
-                        className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(
-                          user.status
-                        )} rounded-full border-2 ${
-                          isDarkMode ? "border-gray-800" : "border-white"
-                        }`}
-                      ></div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium">{user.name}</div>
-                      <div
-                        className={`text-xs ${
-                          isDarkMode ? "text-gray-400" : "text-gray-500"
-                        } capitalize`}
-                      >
-                        {user.status}
-                      </div>
-                    </div>
-                  </button>
-                ))}
               </div>
             )}
           </div>

@@ -22,12 +22,17 @@ export default function ChatArea({
   setChats,
   isDarkMode,
   USERNAME,
+  USER_ID,
+  socket,
   replyingTo,
   setReplyingTo,
+  typingUsers = {},
+  sendMessage: sendMessageFromParent,
 }) {
   const messageContainerRef = useRef(null);
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
   const [dropdownState, setDropdownState] = useState({
     createDropdown: false,
     menuDropdown: false,
@@ -49,6 +54,16 @@ export default function ChatArea({
     }
   }, [activeChat?.messages]);
 
+  // Debug logging for messages
+  useEffect(() => {
+    if (activeChat) {
+      console.log(
+        "ChatArea - Active chat messages updated:",
+        activeChat.messages
+      );
+    }
+  }, [activeChat]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (!e.target.closest(".dropdown-trigger")) {
@@ -65,38 +80,58 @@ export default function ChatArea({
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  // Handle typing indicator
+  const handleTyping = (value) => {
+    setMessage(value);
+
+    if (value.length > 0 && !isTyping) {
+      setIsTyping(true);
+      if (socket?.socket && activeChat) {
+        socket.sendTyping(activeChat.id, USER_ID, true);
+      }
+    }
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set new timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      if (socket?.socket && activeChat) {
+        socket.sendTyping(activeChat.id, USER_ID, false);
+      }
+    }, 1000);
+
+    // If message is empty, immediately stop typing
+    if (value.length === 0) {
+      setIsTyping(false);
+      if (socket?.socket && activeChat) {
+        socket.sendTyping(activeChat.id, USER_ID, false);
+      }
+    }
+  };
   const sendMessage = () => {
     if (!message.trim() || !activeChat) return;
 
-    const now = new Date();
-    const timestamp = now.toTimeString().slice(0, 5);
+    console.log("ChatArea sendMessage called with:", message);
 
-    const newMessage = {
-      text: message,
-      from: USERNAME,
-      timestamp,
-      avatar: "😊",
-    };
-
-    if (replyingTo) {
-      newMessage.replyTo = replyingTo;
-      setReplyingTo(null);
-    }
-
-    setChats((prevChats) => {
-      return prevChats.map((chat) => {
-        if (chat.id === activeChat.id) {
-          return {
-            ...chat,
-            messages: [...chat.messages, newMessage],
-          };
-        }
-        return chat;
-      });
-    });
+    // Use the sendMessage function from parent component
+    sendMessageFromParent(message, replyingTo);
 
     setMessage("");
     setIsTyping(false);
+
+    // Clear typing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Send stop typing signal
+    if (socket?.socket && activeChat) {
+      socket.sendTyping(activeChat.id, USER_ID, false);
+    }
   };
 
   const toggleDropdown = (dropdown) => {
@@ -162,9 +197,23 @@ export default function ChatArea({
                   ) : (
                     <span>{activeChat.lastSeen}</span>
                   )}
-                  {isTyping && (
+                  {Object.entries(typingUsers).some(
+                    ([userId, isTyping]) => isTyping && userId !== USER_ID
+                  ) && (
                     <span className="text-green-500 animate-pulse">
-                      • typing...
+                      •{" "}
+                      {Object.entries(typingUsers)
+                        .filter(
+                          ([userId, isTyping]) => isTyping && userId !== USER_ID
+                        )
+                        .map(([userId]) => userId)
+                        .join(", ")}{" "}
+                      {Object.entries(typingUsers).filter(
+                        ([userId, isTyping]) => isTyping && userId !== USER_ID
+                      ).length > 1
+                        ? "are"
+                        : "is"}{" "}
+                      typing...
                     </span>
                   )}
                 </p>
@@ -535,10 +584,7 @@ export default function ChatArea({
               }`}
               placeholder="Type your message..."
               value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                setIsTyping(e.target.value.length > 0);
-              }}
+              onChange={(e) => handleTyping(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && sendMessage()}
             />
 
