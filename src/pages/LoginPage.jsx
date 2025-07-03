@@ -63,7 +63,7 @@ export default function LoginPage() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
                 <Link to="/">
                   <img
-                    src="src/assets/G-logo.png"
+                    src="./src/assets/G-logo.png"
                     alt="Greets Logo"
                     className="w-10 h-10 object-contain"
                   />
