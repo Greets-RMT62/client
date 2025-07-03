@@ -710,6 +710,7 @@ export default function ChatArea({
         activeChat={activeChat}
         isDarkMode={isDarkMode}
         onSummaryGenerated={handleSummaryGenerated}
+        socket={socket}
       />
     </main>
   );
