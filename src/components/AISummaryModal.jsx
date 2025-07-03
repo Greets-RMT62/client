@@ -9,6 +9,11 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import { roomsAPI, chatsAPI } from "../services/api";
+const USERNAME = localStorage.getItem("username") || "You";
+const USER_ID =
+  localStorage.getItem("userId") ||
+  "user_" + Math.random().toString(36).substr(2, 9);
 
 export default function AISummaryModal({
   isOpen,
@@ -16,6 +21,7 @@ export default function AISummaryModal({
   activeChat,
   isDarkMode,
   onSummaryGenerated,
+  socket, // Add socket prop
 }) {
   const [summary, setSummary] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -149,25 +155,56 @@ export default function AISummaryModal({
 
     setIsLoading(true);
     try {
-      // Always use natural summary for better results
-      const generatedSummary = createNaturalSummary();
-      setSummary(generatedSummary);
+      // Call the AI summary API
+      const response = await chatsAPI.summarizeChat(activeChat.id);
 
-      // Pass summary to parent component
+      // Get the summary text from API response
+      const summaryText =
+        response.data.text || response.data.summary || response.data.message;
+
+      // Set the summary to display in modal
+      setSummary(summaryText);
+
+      // Call callback if provided - this will handle socket sending and local state update
       if (onSummaryGenerated) {
-        onSummaryGenerated(generatedSummary);
+        onSummaryGenerated(summaryText);
       }
+
+      Swal.fire({
+        icon: "success",
+        title: "Summary Generated!",
+        text: "AI has successfully summarized the chat.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (error) {
-      console.error("Error generating summary:", error);
+      console.error("🚀 ~ generateSummary ~ error:", error);
+
+      // Fallback to natural summary if API fails
       const fallbackSummary = createNaturalSummary();
       setSummary(fallbackSummary);
 
+      // Also send the fallback summary via callback
       if (onSummaryGenerated) {
         onSummaryGenerated(fallbackSummary);
       }
+
+      Swal.fire({
+        icon: "warning",
+        title: "AI Service Unavailable",
+        text: "Generated a local summary instead. AI service might be temporarily unavailable.",
+        timer: 3000,
+        showConfirmButton: false,
+      });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleClose = () => {
+    setSummary("");
+    setIsCopied(false);
+    onClose();
   };
 
   const copySummary = async () => {
@@ -209,7 +246,7 @@ export default function AISummaryModal({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className={`p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition ${
               isDarkMode ? "text-gray-400" : "text-gray-600"
             }`}
@@ -278,7 +315,10 @@ export default function AISummaryModal({
                 </button>
 
                 <button
-                  onClick={generateSummary}
+                  onClick={() => {
+                    setSummary(""); // Clear current summary before regenerating
+                    generateSummary();
+                  }}
                   disabled={isLoading}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition ${
                     isDarkMode
@@ -289,7 +329,7 @@ export default function AISummaryModal({
                   <RefreshCw
                     className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
                   />
-                  Regenerate
+                  {isLoading ? "Generating..." : "Regenerate"}
                 </button>
               </div>
             </div>
