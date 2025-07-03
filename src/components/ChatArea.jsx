@@ -13,12 +13,13 @@ import {
   Mic,
   Bell,
   CheckCircle2,
+  Brain,
 } from "lucide-react";
 import ContextMenu from "./ContextMenu";
+import AISummaryModal from "./AISummaryModal";
 
 export default function ChatArea({
   activeChat,
-  chats,
   setChats,
   isDarkMode,
   USERNAME,
@@ -39,6 +40,7 @@ export default function ChatArea({
     attachDropdown: false,
     chatMenu: false,
   });
+  const [showAISummaryModal, setShowAISummaryModal] = useState(false);
 
   const { contextMenu, showContextMenu } = ContextMenu({
     activeChat,
@@ -46,6 +48,45 @@ export default function ChatArea({
     setReplyingTo,
     isDarkMode,
   });
+
+  // Function to handle AI summary generated - broadcast to all users
+  const handleSummaryGenerated = (summaryText) => {
+    if (!activeChat || !summaryText) return;
+
+    // Create a summary message object
+    const summaryMessage = {
+      id: `summary_${Date.now()}`,
+      text: summaryText,
+      from: "AI Assistant",
+      timestamp: new Date().toTimeString().slice(0, 5),
+      avatar: "🤖",
+      userId: "ai_assistant",
+      type: "summary",
+      isSummary: true,
+    };
+
+    // Send summary to all users in the room via Socket.IO
+    if (socket?.socket && activeChat.id) {
+      console.log("Broadcasting AI summary to room:", activeChat.id);
+      const messageData = {
+        roomId: activeChat.id,
+        message: summaryMessage,
+      };
+      socket.sendMessage(messageData);
+    }
+
+    // Also add to local state immediately for instant display
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === activeChat.id
+          ? { ...chat, messages: [...chat.messages, summaryMessage] }
+          : chat
+      )
+    );
+
+    // Close the modal after adding summary
+    setShowAISummaryModal(false);
+  };
 
   useEffect(() => {
     if (messageContainerRef.current) {
@@ -239,6 +280,17 @@ export default function ChatArea({
         {activeChat && (
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowAISummaryModal(true)}
+              className={`p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${
+                isDarkMode
+                  ? "hover:bg-blue-700/20 text-blue-400"
+                  : "hover:bg-blue-50 text-blue-600"
+              }`}
+              title="Generate AI Summary"
+            >
+              <Brain size={20} />
+            </button>
+            <button
               onClick={() => alert("Feature coming soon!")}
               className={`p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${
                 isDarkMode
@@ -313,6 +365,7 @@ export default function ChatArea({
           activeChat.messages.map((msg, index) => {
             const isMe = msg.from === USERNAME;
             const isSystem = msg.from === "System";
+            const isSummary = msg.type === "summary" || msg.isSummary;
 
             if (isSystem) {
               return (
@@ -325,6 +378,48 @@ export default function ChatArea({
                     } backdrop-blur-sm`}
                   >
                     {msg.text}
+                  </div>
+                </div>
+              );
+            }
+
+            // Special rendering for AI Summary
+            if (isSummary) {
+              return (
+                <div key={index} className="flex justify-start mb-4">
+                  <div className="flex items-start gap-3 max-w-xs md:max-w-md lg:max-w-lg">
+                    <span className="text-lg mt-1">🤖</span>
+                    <div
+                      className={`px-4 py-3 rounded-2xl shadow-md backdrop-blur-sm ${
+                        isDarkMode
+                          ? "bg-blue-900/30 border border-blue-700/20"
+                          : "bg-blue-50/80 border border-blue-200/30"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className={`text-xs font-medium ${
+                            isDarkMode ? "text-blue-300" : "text-blue-600"
+                          }`}
+                        >
+                          Summary
+                        </span>
+                        <span
+                          className={`text-xs ${
+                            isDarkMode ? "text-gray-400" : "text-gray-500"
+                          }`}
+                        >
+                          {msg.timestamp}
+                        </span>
+                      </div>
+                      <div
+                        className={`text-sm leading-relaxed ${
+                          isDarkMode ? "text-gray-200" : "text-gray-700"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -607,6 +702,15 @@ export default function ChatArea({
 
       {/* Context Menu */}
       {contextMenu}
+
+      {/* AI Summary Modal */}
+      <AISummaryModal
+        isOpen={showAISummaryModal}
+        onClose={() => setShowAISummaryModal(false)}
+        activeChat={activeChat}
+        isDarkMode={isDarkMode}
+        onSummaryGenerated={handleSummaryGenerated}
+      />
     </main>
   );
 }
