@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   Trash2,
   Plus,
@@ -13,44 +14,43 @@ import {
   Zap,
   Crown,
   Shield,
-  CheckCircle2,
-} from "lucide-react";
-import { useNavigate } from "react-router";
+  CheckCircle2
+} from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 export default function Sidebar({
   chats,
   activeChat,
   setActiveChat,
   setChats,
-  isDarkMode,
-  setIsDarkMode,
   USERNAME,
-  isLoading = false,
+  // isLoading = false,
   onCreateRoom,
-  onStartPrivateChat,
+  onStartPrivateChat
 }) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const { isDarkMode, toggleTheme } = useTheme();
+  const [searchTerm, setSearchTerm] = useState('');
   const [dropdownState, setDropdownState] = useState({
     createDropdown: false,
     menuDropdown: false,
     attachDropdown: false,
-    chatMenu: false,
+    chatMenu: false
   });
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest(".dropdown-trigger")) {
+      if (!e.target.closest('.dropdown-trigger')) {
         setDropdownState({
           createDropdown: false,
           menuDropdown: false,
           attachDropdown: false,
-          chatMenu: false,
+          chatMenu: false
         });
       }
     };
 
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const toggleDropdown = (dropdown) => {
@@ -59,7 +59,7 @@ export default function Sidebar({
         createDropdown: false,
         menuDropdown: false,
         attachDropdown: false,
-        chatMenu: false,
+        chatMenu: false
       };
       newState[dropdown] = !prev[dropdown];
       return newState;
@@ -71,9 +71,7 @@ export default function Sidebar({
     setActiveChat(chat);
 
     // Mark as read
-    setChats((prevChats) =>
-      prevChats.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-    );
+    setChats((prevChats) => prevChats.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)));
   };
 
   const deleteChat = (id) => {
@@ -83,16 +81,10 @@ export default function Sidebar({
     }
   };
 
-  const filteredChats = chats.filter((chat) =>
-    chat.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  console.log("🚀 ~ filteredChats:", filteredChats);
+  const filteredChats = chats.filter((chat) => chat.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  console.log('🚀 ~ filteredChats:', filteredChats);
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
-  let access_token = localStorage.getItem("access_token").split(".")[1];
+  let access_token = localStorage.getItem('access_token').split('.')[1];
   let payload = JSON.parse(atob(access_token));
   const currentUserId = payload.id;
   const navigate = useNavigate();
@@ -101,8 +93,8 @@ export default function Sidebar({
     <aside
       className={`w-full sm:w-1/3 lg:w-1/4 ${
         isDarkMode
-          ? "bg-gray-800 border-gray-700"
-          : "bg-white/80 backdrop-blur-xl border-white/20"
+          ? 'bg-gray-900 border-gray-800 text-white'
+          : 'bg-white/80 backdrop-blur-xl border-white/20 text-gray-900'
       } border-r flex flex-col shadow-2xl`}
     >
       {/* Header */}
@@ -112,32 +104,28 @@ export default function Sidebar({
             <img src="/G-logo.png" alt="" />
           </div>
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Chats
-            </h1>
-            <p
-              className={`text-xs ${
-                isDarkMode ? "text-gray-400" : "text-gray-500"
+            <h1
+              className={`text-xl font-bold ${
+                isDarkMode ? 'text-white' : 'bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent'
               }`}
             >
-              Stay connected
-            </p>
+              Chats
+            </h1>
+            <p className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Stay connected</p>
           </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={toggleTheme}
             className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 ${
-              isDarkMode
-                ? "hover:bg-gray-700 text-yellow-400"
-                : "hover:bg-purple-100 text-purple-600"
+              isDarkMode ? 'hover:bg-gray-700 text-yellow-400' : 'hover:bg-purple-100 text-purple-600'
             }`}
           >
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <div className="relative dropdown-trigger">
             <button
-              onClick={() => toggleDropdown("createDropdown")}
+              onClick={() => toggleDropdown('createDropdown')}
               className="p-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-110 shadow-lg"
             >
               <Plus size={18} />
@@ -145,9 +133,7 @@ export default function Sidebar({
             {dropdownState.createDropdown && (
               <div
                 className={`absolute right-0 mt-2 w-48 ${
-                  isDarkMode
-                    ? "bg-gray-800 border-gray-700"
-                    : "bg-white/90 backdrop-blur-xl border-white/20"
+                  isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white/90 backdrop-blur-xl border-white/20'
                 } border rounded-2xl shadow-2xl z-10 overflow-hidden`}
               >
                 <button
@@ -155,11 +141,11 @@ export default function Sidebar({
                     onStartPrivateChat();
                     setDropdownState((prev) => ({
                       ...prev,
-                      createDropdown: false,
+                      createDropdown: false
                     }));
                   }}
                   className={`block w-full text-left px-6 py-3 ${
-                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-purple-50"
+                    isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-purple-50'
                   } transition-all duration-200 flex items-center gap-3`}
                 >
                   <Users size={16} className="text-blue-500" />
@@ -170,11 +156,11 @@ export default function Sidebar({
                     onCreateRoom();
                     setDropdownState((prev) => ({
                       ...prev,
-                      createDropdown: false,
+                      createDropdown: false
                     }));
                   }}
                   className={`block w-full text-left px-6 py-3 ${
-                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-purple-50"
+                    isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-purple-50'
                   } transition-all duration-200 flex items-center gap-3`}
                 >
                   <Crown size={16} className="text-yellow-500" />
@@ -186,11 +172,9 @@ export default function Sidebar({
 
           <div className="relative dropdown-trigger">
             <button
-              onClick={() => toggleDropdown("menuDropdown")}
+              onClick={() => toggleDropdown('menuDropdown')}
               className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 ${
-                isDarkMode
-                  ? "hover:bg-gray-700 text-gray-300"
-                  : "hover:bg-gray-100 text-gray-600"
+                isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
               }`}
             >
               <Settings size={18} />
@@ -198,14 +182,12 @@ export default function Sidebar({
             {dropdownState.menuDropdown && (
               <div
                 className={`absolute right-0 mt-2 w-48 ${
-                  isDarkMode
-                    ? "bg-gray-800 border-gray-700"
-                    : "bg-white/90 backdrop-blur-xl border-white/20"
+                  isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white/90 backdrop-blur-xl border-white/20'
                 } border rounded-2xl shadow-2xl z-10 overflow-hidden`}
               >
                 <button
                   className={`block w-full text-left px-6 py-3 ${
-                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-purple-50"
+                    isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-purple-50'
                   } transition-all duration-200 flex items-center gap-3`}
                 >
                   <Bell size={16} className="text-blue-500" />
@@ -213,11 +195,11 @@ export default function Sidebar({
                 </button>
                 <button
                   onClick={() => {
-                    localStorage.removeItem("access_token");
-                    navigate("/login");
+                    localStorage.removeItem('access_token');
+                    navigate('/login');
                   }}
                   className={`block w-full text-left px-6 py-3 ${
-                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-red-50"
+                    isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-red-50'
                   } transition-all duration-200 flex items-center gap-3 text-red-500`}
                 >
                   <Shield size={16} />
@@ -234,7 +216,7 @@ export default function Sidebar({
         <div className="relative">
           <Search
             className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
-              isDarkMode ? "text-gray-400" : "text-gray-400"
+              isDarkMode ? 'text-gray-300' : 'text-gray-400'
             }`}
             size={18}
           />
@@ -245,8 +227,8 @@ export default function Sidebar({
             onChange={(e) => setSearchTerm(e.target.value)}
             className={`w-full pl-10 pr-4 py-3 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
               isDarkMode
-                ? "bg-gray-700 text-white placeholder-gray-400"
-                : "bg-gray-100 text-gray-900 placeholder-gray-500"
+                ? 'bg-gray-800 text-white placeholder-gray-400 border border-gray-700'
+                : 'bg-gray-100 text-gray-900 placeholder-gray-500 border border-white/30'
             }`}
           />
         </div>
@@ -262,48 +244,41 @@ export default function Sidebar({
               className={`mx-2 mb-2 rounded-2xl transition-all duration-300 hover:scale-[1.02] ${
                 activeChat?.id === chat.id
                   ? isDarkMode
-                    ? "bg-gray-700 shadow-lg"
-                    : "bg-gradient-to-r from-purple-100 to-pink-100 shadow-lg"
+                    ? 'bg-gray-700 shadow-lg'
+                    : 'bg-gradient-to-r from-purple-100 to-pink-100 shadow-lg'
                   : isDarkMode
-                  ? "hover:bg-gray-700/50"
-                  : "hover:bg-white/50"
+                  ? 'hover:bg-gray-700/50'
+                  : 'hover:bg-white/50'
               } cursor-pointer group`}
             >
               <div className="px-4 py-4 flex justify-between items-center">
-                <div
-                  className="cursor-pointer flex-1 flex items-center gap-3"
-                  onClick={() => openChat(chat.id)}
-                >
+                <div className="cursor-pointer flex-1 flex items-center gap-3" onClick={() => openChat(chat.id)}>
                   <div className="relative">
                     <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center text-xl shadow-lg">
                       {chat.avatar}
                     </div>
-                    {chat.lastSeen === "online" && (
+                    {chat.lastSeen === 'online' && (
                       <div
                         className={`absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 ${
-                          isDarkMode ? "border-gray-800" : "border-white"
+                          isDarkMode ? 'border-gray-800' : 'border-white'
                         }`}
                       ></div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold truncate w-40">
+                      <h3 className={`font-semibold truncate w-40 ${isDarkMode ? 'text-white' : ''}`}>
                         {chat.isGroup
                           ? chat.name
                           : chat.UserHasRooms[0].UserId !== currentUserId
                           ? chat.UserHasRooms[0].User.username
                           : chat.UserHasRooms[1].User.username}
                       </h3>
-                      {chat.isPinned && (
-                        <Zap size={14} className="text-yellow-500" />
-                      )}
+                      {chat.isPinned && <Zap size={14} className="text-yellow-500" />}
                       {chat.isGroup && (
                         <span
                           className={`text-xs px-2 py-1 block rounded-full ${
-                            isDarkMode
-                              ? "bg-purple-900 text-purple-300"
-                              : "bg-purple-100 text-purple-600"
+                            isDarkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-600'
                           }`}
                         >
                           Group
@@ -312,31 +287,20 @@ export default function Sidebar({
                     </div>
                     <div
                       className={`text-sm truncate w-35 flex items-center gap-1 ${
-                        isDarkMode ? "text-gray-400" : "text-gray-500"
+                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
                       }`}
                     >
                       {lastMessage && (
                         <>
-                          {lastMessage.from === USERNAME && (
-                            <CheckCircle2
-                              size={12}
-                              className="text-green-500"
-                            />
-                          )}
+                          {lastMessage.from === USERNAME && <CheckCircle2 size={12} className="text-green-500" />}
                           <span>
-                            {lastMessage.from === USERNAME
-                              ? "You: "
-                              : `${lastMessage.from}: `}
+                            {lastMessage.from === USERNAME ? 'You: ' : `${lastMessage.from}: `}
                             {lastMessage.text}
                           </span>
                         </>
                       )}
                     </div>
-                    <div
-                      className={`text-xs mt-1 ${
-                        isDarkMode ? "text-gray-500" : "text-gray-400"
-                      }`}
-                    >
+                    <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                       {chat.lastSeen}
                     </div>
                   </div>
@@ -353,8 +317,8 @@ export default function Sidebar({
                   }}
                   className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-2 rounded-xl ${
                     isDarkMode
-                      ? "hover:bg-gray-600 text-gray-400 hover:text-red-400"
-                      : "hover:bg-red-50 text-gray-400 hover:text-red-500"
+                      ? 'hover:bg-gray-600 text-gray-400 hover:text-red-400'
+                      : 'hover:bg-red-50 text-gray-400 hover:text-red-500'
                   }`}
                 >
                   <Trash2 size={16} />
