@@ -211,7 +211,6 @@ export default function ChatArea({
 
   return (
     <main className="flex-1 flex flex-col">
-      {/* Chat Header */}
       <header
         className={`p-6 ${
           isDarkMode
@@ -235,7 +234,13 @@ export default function ChatArea({
                 )}
               </div>
               <div>
-                <h2 className="font-bold text-xl">{localActiveChat.name}</h2>
+                <h2 className="font-bold text-xl">
+                  {localActiveChat.isGroup
+                    ? localActiveChat.name
+                    : localActiveChat.UserHasRooms[0].UserId !== USER_ID
+                    ? localActiveChat.UserHasRooms[0].User.username
+                    : localActiveChat.UserHasRooms[1].User.username}
+                </h2>
                 <p
                   className={`text-sm ${
                     isDarkMode ? "text-gray-400" : "text-gray-500"
@@ -369,7 +374,6 @@ export default function ChatArea({
           </div>
         )}
       </header>
-
       {/* Messages Area */}
       <div
         ref={messageContainerRef}
@@ -650,7 +654,6 @@ export default function ChatArea({
           </div>
         )}
       </div>
-
       {/* Input Area */}
       {localActiveChat && (
         <div
@@ -794,10 +797,8 @@ export default function ChatArea({
           </div>
         </div>
       )}
-
       {/* Context Menu */}
       {contextMenu}
-
       {/* AI Summary Modal */}
       <AISummaryModal
         isOpen={showAISummaryModal}
