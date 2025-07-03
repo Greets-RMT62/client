@@ -227,48 +227,34 @@ export default function RoomChat() {
     }
   }, [chats, activeChat]);
 
-  // Function to send message - moved from ChatArea to RoomChat
+  // Function to send message - simplified version
   const sendMessage = async (messageText, replyTo = null) => {
     if (!messageText.trim() || !activeChat) return;
 
     console.log("Sending message:", messageText, "to room:", activeChat.id);
 
-    const now = new Date();
-    const timestamp = now.toTimeString().slice(0, 5);
-
-    // Create temporary message for immediate UI update
     const tempMessage = {
+      id: Date.now() + Math.random(),
       text: messageText,
       from: USERNAME,
-      timestamp,
+      timestamp: new Date().toTimeString().slice(0, 5),
       avatar: "😊",
-      id: Date.now() + Math.random(),
       userId: USER_ID,
     };
 
     if (replyTo) {
       tempMessage.replyTo = replyTo;
-      setReplyingTo(null); // Clear reply state after using it
+      setReplyingTo(null);
     }
 
-    console.log("New message object:", tempMessage);
-
-    // Add message to local state immediately for better UX
-    setChats((prevChats) => {
-      const updatedChats = prevChats.map((chat) => {
-        if (chat.id === activeChat.id) {
-          const updatedChat = {
-            ...chat,
-            messages: [...chat.messages, tempMessage],
-          };
-          console.log("Updated chat messages:", updatedChat.messages);
-          return updatedChat;
-        }
-        return chat;
-      });
-      console.log("Updated chats state:", updatedChats);
-      return updatedChats;
-    });
+    // Add message to local state immediately
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === activeChat.id
+          ? { ...chat, messages: [...chat.messages, tempMessage] }
+          : chat
+      )
+    );
 
     try {
       // Send message to API
@@ -278,66 +264,181 @@ export default function RoomChat() {
         replyTo?.id || null
       );
 
-      console.log("Message sent successfully:", response.data);
-
-      // Update the temporary message with real data from server
+      // Update temp message with real data
       const realMessage = {
+        ...tempMessage,
         id: response.data.id,
-        text: response.data.text,
-        from: USERNAME,
         timestamp: new Date(response.data.createdAt).toTimeString().slice(0, 5),
-        avatar: "😊",
         userId: response.data.UserId,
       };
 
-      // Replace temporary message with real message
-      setChats((prevChats) => {
-        return prevChats.map((chat) => {
-          if (chat.id === activeChat.id) {
-            const updatedMessages = chat.messages.map((msg) =>
-              msg.id === tempMessage.id ? realMessage : msg
-            );
-            return {
-              ...chat,
-              messages: updatedMessages,
-            };
-          }
-          return chat;
-        });
-      });
+      // Update local state
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === activeChat.id
+            ? {
+                ...chat,
+                messages: chat.messages.map((msg) =>
+                  msg.id === tempMessage.id ? realMessage : msg
+                ),
+              }
+            : chat
+        )
+      );
 
-      // Send message via Socket.IO to other users
+      // Send via Socket.IO
       if (socket?.socket) {
-        console.log("Sending via Socket.IO to room:", activeChat.id);
         socket.sendMessage({
           roomId: activeChat.id,
           message: realMessage,
           userId: realMessage.userId,
         });
       }
+
+      // Handle @Greets AI messages
+      if (messageText.trim().startsWith("@Greets")) {
+        const aiPrompt = messageText.replace(/^@Greets\s*/i, "").trim();
+
+        if (aiPrompt) {
+          await handleAIMessage(aiPrompt);
+        } else {
+          // Show help message
+          const helpMessage = {
+            id: Date.now() + Math.random(),
+            text: "Hi! I'm Greets AI. Please provide a prompt after @Greets to get started. For example: '@Greets What's the weather like today?'",
+            from: "Greets AI",
+            timestamp: new Date().toTimeString().slice(0, 5),
+            avatar: "🤖",
+            userId: "greets_ai",
+            isAiResponse: true,
+            isHelp: true,
+          };
+
+          setChats((prevChats) =>
+            prevChats.map((chat) =>
+              chat.id === activeChat.id
+                ? { ...chat, messages: [...chat.messages, helpMessage] }
+                : chat
+            )
+          );
+        }
+      }
     } catch (error) {
       console.error("Error sending message:", error);
 
-      // Remove temporary message on error
-      setChats((prevChats) => {
-        return prevChats.map((chat) => {
-          if (chat.id === activeChat.id) {
-            return {
-              ...chat,
-              messages: chat.messages.filter(
-                (msg) => msg.id !== tempMessage.id
-              ),
-            };
-          }
-          return chat;
-        });
-      });
+      // Remove temp message on error
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === activeChat.id
+            ? {
+                ...chat,
+                messages: chat.messages.filter(
+                  (msg) => msg.id !== tempMessage.id
+                ),
+              }
+            : chat
+        )
+      );
 
       Swal.fire({
         icon: "error",
         title: "Error",
         text: "Failed to send message",
       });
+    }
+  };
+
+  // Separate function to handle AI messages
+  const handleAIMessage = async (prompt) => {
+    // Add typing indicator
+    const typingMessage = {
+      id: "ai_typing_" + Date.now(),
+      text: "Greets AI is thinking...",
+      from: "Greets AI",
+      timestamp: new Date().toTimeString().slice(0, 5),
+      avatar: "🤖",
+      userId: "greets_ai",
+      isAiResponse: true,
+      isTyping: true,
+    };
+
+    // Show typing indicator
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === activeChat.id
+          ? { ...chat, messages: [...chat.messages, typingMessage] }
+          : chat
+      )
+    );
+
+    try {
+      // Send to AI API
+      const aiResponse = await chatsAPI.createAIChat(activeChat.id, prompt);
+
+      // Create AI message
+      const aiMessage = {
+        id: aiResponse.data.id || Date.now() + Math.random(),
+        text:
+          aiResponse.data.text ||
+          aiResponse.data.message ||
+          "AI response received",
+        from: "Greets AI",
+        timestamp: new Date().toTimeString().slice(0, 5),
+        avatar: "🤖",
+        userId: "greets_ai",
+        isAiResponse: true,
+      };
+
+      // Replace typing indicator with AI response
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === activeChat.id
+            ? {
+                ...chat,
+                messages: chat.messages.map((msg) =>
+                  msg.id === typingMessage.id ? aiMessage : msg
+                ),
+              }
+            : chat
+        )
+      );
+
+      // Send AI response via Socket.IO
+      if (socket?.socket) {
+        socket.sendMessage({
+          roomId: activeChat.id,
+          message: aiMessage,
+          userId: "greets_ai",
+        });
+      }
+    } catch (error) {
+      console.error("AI Chat error:", error);
+
+      // Create error message
+      const errorMessage = {
+        id: Date.now() + Math.random(),
+        text: "Sorry, I'm having trouble processing your request right now. Please try again later.",
+        from: "Greets AI",
+        timestamp: new Date().toTimeString().slice(0, 5),
+        avatar: "🤖",
+        userId: "greets_ai",
+        isAiResponse: true,
+        isError: true,
+      };
+
+      // Replace typing indicator with error message
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === activeChat.id
+            ? {
+                ...chat,
+                messages: chat.messages.map((msg) =>
+                  msg.id === typingMessage.id ? errorMessage : msg
+                ),
+              }
+            : chat
+        )
+      );
     }
   };
 

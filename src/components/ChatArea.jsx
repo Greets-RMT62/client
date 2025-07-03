@@ -20,6 +20,7 @@ import AISummaryModal from "./AISummaryModal";
 
 export default function ChatArea({
   activeChat,
+  chats,
   setChats,
   isDarkMode,
   USERNAME,
@@ -42,16 +43,32 @@ export default function ChatArea({
   });
   const [showAISummaryModal, setShowAISummaryModal] = useState(false);
 
+  // Local state for activeChat to ensure real-time updates
+  const [localActiveChat, setLocalActiveChat] = useState(activeChat);
+
   const { contextMenu, showContextMenu } = ContextMenu({
-    activeChat,
+    activeChat: localActiveChat,
     setChats,
     setReplyingTo,
     isDarkMode,
   });
 
+  // Sync local activeChat with prop and chats state for real-time updates
+  useEffect(() => {
+    if (activeChat && chats && chats.length > 0) {
+      // Find the updated chat from chats array
+      const updatedChat = chats.find((chat) => chat.id === activeChat.id);
+      if (updatedChat) {
+        setLocalActiveChat(updatedChat);
+      }
+    } else {
+      setLocalActiveChat(activeChat);
+    }
+  }, [activeChat, chats]);
+
   // Function to handle AI summary generated - broadcast to all users
   const handleSummaryGenerated = (summaryText) => {
-    if (!activeChat || !summaryText) return;
+    if (!localActiveChat || !summaryText) return;
 
     // Create a summary message object
     const summaryMessage = {
@@ -66,10 +83,10 @@ export default function ChatArea({
     };
 
     // Send summary to all users in the room via Socket.IO
-    if (socket?.socket && activeChat.id) {
-      console.log("Broadcasting AI summary to room:", activeChat.id);
+    if (socket?.socket && localActiveChat.id) {
+      console.log("Broadcasting AI summary to room:", localActiveChat.id);
       const messageData = {
-        roomId: activeChat.id,
+        roomId: localActiveChat.id,
         message: summaryMessage,
       };
       socket.sendMessage(messageData);
@@ -78,7 +95,7 @@ export default function ChatArea({
     // Also add to local state immediately for instant display
     setChats((prevChats) =>
       prevChats.map((chat) =>
-        chat.id === activeChat.id
+        chat.id === localActiveChat.id
           ? { ...chat, messages: [...chat.messages, summaryMessage] }
           : chat
       )
@@ -93,17 +110,17 @@ export default function ChatArea({
       messageContainerRef.current.scrollTop =
         messageContainerRef.current.scrollHeight;
     }
-  }, [activeChat?.messages]);
+  }, [localActiveChat?.messages]);
 
   // Debug logging for messages
   useEffect(() => {
-    if (activeChat) {
+    if (localActiveChat) {
       console.log(
         "ChatArea - Active chat messages updated:",
-        activeChat.messages
+        localActiveChat.messages
       );
     }
-  }, [activeChat]);
+  }, [localActiveChat]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -127,8 +144,8 @@ export default function ChatArea({
 
     if (value.length > 0 && !isTyping) {
       setIsTyping(true);
-      if (socket?.socket && activeChat) {
-        socket.sendTyping(activeChat.id, USER_ID, true);
+      if (socket?.socket && localActiveChat) {
+        socket.sendTyping(localActiveChat.id, USER_ID, true);
       }
     }
 
@@ -140,21 +157,21 @@ export default function ChatArea({
     // Set new timeout to stop typing indicator
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      if (socket?.socket && activeChat) {
-        socket.sendTyping(activeChat.id, USER_ID, false);
+      if (socket?.socket && localActiveChat) {
+        socket.sendTyping(localActiveChat.id, USER_ID, false);
       }
     }, 1000);
 
     // If message is empty, immediately stop typing
     if (value.length === 0) {
       setIsTyping(false);
-      if (socket?.socket && activeChat) {
-        socket.sendTyping(activeChat.id, USER_ID, false);
+      if (socket?.socket && localActiveChat) {
+        socket.sendTyping(localActiveChat.id, USER_ID, false);
       }
     }
   };
   const sendMessage = () => {
-    if (!message.trim() || !activeChat) return;
+    if (!message.trim() || !localActiveChat) return;
 
     console.log("ChatArea sendMessage called with:", message);
 
@@ -170,8 +187,8 @@ export default function ChatArea({
     }
 
     // Send stop typing signal
-    if (socket?.socket && activeChat) {
-      socket.sendTyping(activeChat.id, USER_ID, false);
+    if (socket?.socket && localActiveChat) {
+      socket.sendTyping(localActiveChat.id, USER_ID, false);
     }
   };
 
@@ -203,13 +220,13 @@ export default function ChatArea({
         } border-b flex justify-between items-center shadow-sm`}
       >
         <div className="flex items-center gap-4">
-          {activeChat && (
+          {localActiveChat && (
             <>
               <div className="relative">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center text-xl shadow-lg">
-                  {activeChat.avatar}
+                  {localActiveChat.avatar}
                 </div>
-                {activeChat.lastSeen === "online" && (
+                {localActiveChat.lastSeen === "online" && (
                   <div
                     className={`absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 ${
                       isDarkMode ? "border-gray-800" : "border-white"
@@ -218,25 +235,26 @@ export default function ChatArea({
                 )}
               </div>
               <div>
-                <h2 className="font-bold text-xl">{activeChat.name}</h2>
+                <h2 className="font-bold text-xl">{localActiveChat.name}</h2>
                 <p
                   className={`text-sm ${
                     isDarkMode ? "text-gray-400" : "text-gray-500"
                   } flex items-center gap-2`}
                 >
-                  {activeChat.isGroup ? (
+                  {localActiveChat.isGroup ? (
                     <>
                       <Users size={14} />
                       <span>
                         {
-                          activeChat.messages.filter((m) => m.from !== "System")
-                            .length
+                          localActiveChat.messages.filter(
+                            (m) => m.from !== "System"
+                          ).length
                         }{" "}
                         members
                       </span>
                     </>
                   ) : (
-                    <span>{activeChat.lastSeen}</span>
+                    <span>{localActiveChat.lastSeen}</span>
                   )}
                   {Object.entries(typingUsers).some(
                     ([userId, isTyping]) => isTyping && userId !== USER_ID
@@ -261,7 +279,7 @@ export default function ChatArea({
               </div>
             </>
           )}
-          {!activeChat && (
+          {!localActiveChat && (
             <div>
               <h2 className="font-bold text-xl bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 Welcome to Chat
@@ -277,7 +295,7 @@ export default function ChatArea({
           )}
         </div>
 
-        {activeChat && (
+        {localActiveChat && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowAISummaryModal(true)}
@@ -361,11 +379,15 @@ export default function ChatArea({
             : "bg-gradient-to-b from-purple-50/30 to-pink-50/30"
         }`}
       >
-        {activeChat && activeChat.messages.length > 0 ? (
-          activeChat.messages.map((msg, index) => {
+        {localActiveChat && localActiveChat.messages.length > 0 ? (
+          localActiveChat.messages.map((msg, index) => {
             const isMe = msg.from === USERNAME;
             const isSystem = msg.from === "System";
             const isSummary = msg.type === "summary" || msg.isSummary;
+            const isAI = msg.from === "Greets AI" || msg.isAiResponse;
+            const isTyping = msg.isTyping;
+            const isError = msg.isError;
+            const isHelp = msg.isHelp;
 
             if (isSystem) {
               return (
@@ -411,6 +433,79 @@ export default function ChatArea({
                         >
                           {msg.timestamp}
                         </span>
+                      </div>
+                      <div
+                        className={`text-sm leading-relaxed ${
+                          isDarkMode ? "text-gray-200" : "text-gray-700"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Special rendering for AI Messages
+            if (isAI) {
+              return (
+                <div key={index} className="flex justify-start mb-4">
+                  <div className="flex items-start gap-3 max-w-xs md:max-w-md lg:max-w-lg">
+                    <span className="text-lg mt-1">{msg.avatar || "🤖"}</span>
+                    <div
+                      className={`px-4 py-3 rounded-2xl shadow-md backdrop-blur-sm ${
+                        isError
+                          ? isDarkMode
+                            ? "bg-red-900/30 border border-red-700/20"
+                            : "bg-red-50/80 border border-red-200/30"
+                          : isHelp
+                          ? isDarkMode
+                            ? "bg-yellow-900/30 border border-yellow-700/20"
+                            : "bg-yellow-50/80 border border-yellow-200/30"
+                          : isDarkMode
+                          ? "bg-purple-900/30 border border-purple-700/20"
+                          : "bg-purple-50/80 border border-purple-200/30"
+                      } ${isTyping ? "animate-pulse" : ""}`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className={`text-xs font-medium ${
+                            isError
+                              ? isDarkMode
+                                ? "text-red-300"
+                                : "text-red-600"
+                              : isHelp
+                              ? isDarkMode
+                                ? "text-yellow-300"
+                                : "text-yellow-600"
+                              : isDarkMode
+                              ? "text-purple-300"
+                              : "text-purple-600"
+                          }`}
+                        >
+                          {isError ? "Error" : isHelp ? "Help" : "Greets AI"}
+                        </span>
+                        <span
+                          className={`text-xs ${
+                            isDarkMode ? "text-gray-400" : "text-gray-500"
+                          }`}
+                        >
+                          {msg.timestamp}
+                        </span>
+                        {isTyping && (
+                          <div className="flex gap-1">
+                            <div className="w-1 h-1 bg-current rounded-full animate-bounce"></div>
+                            <div
+                              className="w-1 h-1 bg-current rounded-full animate-bounce"
+                              style={{ animationDelay: "0.1s" }}
+                            ></div>
+                            <div
+                              className="w-1 h-1 bg-current rounded-full animate-bounce"
+                              style={{ animationDelay: "0.2s" }}
+                            ></div>
+                          </div>
+                        )}
                       </div>
                       <div
                         className={`text-sm leading-relaxed ${
@@ -511,7 +606,7 @@ export default function ChatArea({
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              {activeChat ? (
+              {localActiveChat ? (
                 <>
                   <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-3xl mb-4 mx-auto shadow-2xl">
                     💬
@@ -528,7 +623,7 @@ export default function ChatArea({
                       isDarkMode ? "text-gray-500" : "text-gray-400"
                     }`}
                   >
-                    Start the conversation with {activeChat.name}
+                    Start the conversation with {localActiveChat.name}
                   </p>
                 </>
               ) : (
@@ -557,7 +652,7 @@ export default function ChatArea({
       </div>
 
       {/* Input Area */}
-      {activeChat && (
+      {localActiveChat && (
         <div
           className={`p-6 ${
             isDarkMode
@@ -677,7 +772,7 @@ export default function ChatArea({
                   ? "text-white placeholder-gray-400"
                   : "text-gray-900 placeholder-gray-500"
               }`}
-              placeholder="Type your message..."
+              placeholder="Type your message... (Try @Greets for AI assistance)"
               value={message}
               onChange={(e) => handleTyping(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && sendMessage()}
@@ -707,7 +802,7 @@ export default function ChatArea({
       <AISummaryModal
         isOpen={showAISummaryModal}
         onClose={() => setShowAISummaryModal(false)}
-        activeChat={activeChat}
+        activeChat={localActiveChat}
         isDarkMode={isDarkMode}
         onSummaryGenerated={handleSummaryGenerated}
         socket={socket}
