@@ -1,27 +1,25 @@
-import { useState, useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import ChatArea from "../components/ChatArea";
-import CustomStyles from "../components/CustomStyles";
-import CreateRoomModal from "../components/CreateRoomModal";
-import StartPrivateChatModal from "../components/StartPrivateChatModal";
-import useSocket from "../hooks/useSocket";
-import { roomsAPI, chatsAPI } from "../services/api";
-import Swal from "sweetalert2";
+import { useState, useEffect } from 'react';
+// import { useTheme } from "../contexts/ThemeContext";
+import Sidebar from '../components/Sidebar';
+import ChatArea from '../components/ChatArea';
+import CustomStyles from '../components/CustomStyles';
+import CreateRoomModal from '../components/CreateRoomModal';
+import StartPrivateChatModal from '../components/StartPrivateChatModal';
+import useSocket from '../hooks/useSocket';
+import { roomsAPI, chatsAPI } from '../services/api';
+import Swal from 'sweetalert2';
 
 export default function RoomChat() {
   const [activeChat, setActiveChat] = useState(null);
   const [chats, setChats] = useState([]);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [typingUsers, setTypingUsers] = useState({});
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showPrivateChatModal, setShowPrivateChatModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const USERNAME = localStorage.getItem("username") || "You";
-  const USER_ID =
-    localStorage.getItem("userId") ||
-    "user_" + Math.random().toString(36).substr(2, 9);
+  const USERNAME = localStorage.getItem('username') || 'You';
+  const USER_ID = localStorage.getItem('userId') || 'user_' + Math.random().toString(36).substr(2, 9);
 
   // Initialize Socket.IO
   const socket = useSocket();
@@ -40,25 +38,25 @@ export default function RoomChat() {
       const transformedChats = response.data.map((userRoom) => ({
         id: userRoom.Room.id,
         name: userRoom.Room.name,
-        isGroup: userRoom.Room.roomType === "group-chat",
-        avatar: userRoom.Room.roomType === "group-chat" ? "👥" : "👤",
-        lastSeen: "online",
+        isGroup: userRoom.Room.roomType === 'group-chat',
+        avatar: userRoom.Room.roomType === 'group-chat' ? '👥' : '👤',
+        lastSeen: 'online',
         unreadCount: 0,
         isPinned: false,
         messages: [],
         roomType: userRoom.Room.roomType,
         description: userRoom.Room.description,
         owner: userRoom.Room.Owner,
-        UserHasRooms: userRoom.Room.UserHasRooms,
+        UserHasRooms: userRoom.Room.UserHasRooms
       }));
 
       setChats(transformedChats);
     } catch (error) {
-      console.error("Error fetching rooms:", error);
+      console.error('Error fetching rooms:', error);
       Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to load rooms",
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to load rooms'
       });
     } finally {
       setIsLoading(false);
@@ -74,24 +72,22 @@ export default function RoomChat() {
       const transformedMessages = response.data.map((chat) => ({
         id: chat.id,
         text: chat.text,
-        from: chat.User?.username || "Unknown",
+        from: chat.User?.username || 'Unknown',
         timestamp: new Date(chat.createdAt).toTimeString().slice(0, 5),
-        avatar: "😊",
-        userId: chat.UserId,
+        avatar: '😊',
+        userId: chat.UserId
       }));
 
       // Update the specific chat with messages
       setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === roomId ? { ...chat, messages: transformedMessages } : chat
-        )
+        prevChats.map((chat) => (chat.id === roomId ? { ...chat, messages: transformedMessages } : chat))
       );
     } catch (error) {
-      console.error("Error fetching messages:", error);
+      console.error('Error fetching messages:', error);
       Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to load messages",
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to load messages'
       });
     }
   };
@@ -102,16 +98,14 @@ export default function RoomChat() {
 
     // Listen for incoming messages
     socket.onReceiveMessage((messageData) => {
-      console.log("Received message:", messageData);
+      console.log('Received message:', messageData);
 
       // Add the message to the appropriate room
       setChats((prevChats) => {
         return prevChats.map((chat) => {
           if (chat.id === messageData.roomId) {
             // Check if message already exists to avoid duplicates
-            const messageExists = chat.messages.some(
-              (msg) => msg.id === messageData.message.id
-            );
+            const messageExists = chat.messages.some((msg) => msg.id === messageData.message.id);
             if (messageExists) {
               return chat;
             }
@@ -119,8 +113,7 @@ export default function RoomChat() {
             return {
               ...chat,
               messages: [...chat.messages, messageData.message],
-              unreadCount:
-                chat.id === activeChat?.id ? 0 : chat.unreadCount + 1,
+              unreadCount: chat.id === activeChat?.id ? 0 : chat.unreadCount + 1
             };
           }
           return chat;
@@ -129,37 +122,30 @@ export default function RoomChat() {
 
       // Update activeChat if user is currently viewing this room
       if (activeChat && activeChat.id === messageData.roomId) {
-        console.log(
-          "Updating activeChat with new message for room:",
-          messageData.roomId
-        );
+        console.log('Updating activeChat with new message for room:', messageData.roomId);
         setActiveChat((prevActiveChat) => {
           if (!prevActiveChat || prevActiveChat.id !== messageData.roomId) {
             return prevActiveChat;
           }
 
           // Check if message already exists
-          const messageExists = prevActiveChat.messages.some(
-            (msg) => msg.id === messageData.message.id
-          );
+          const messageExists = prevActiveChat.messages.some((msg) => msg.id === messageData.message.id);
           if (messageExists) {
-            console.log(
-              "Message already exists in activeChat, skipping duplicate"
-            );
+            console.log('Message already exists in activeChat, skipping duplicate');
             return prevActiveChat;
           }
 
-          console.log("Adding new message to activeChat:", messageData.message);
+          console.log('Adding new message to activeChat:', messageData.message);
           return {
             ...prevActiveChat,
-            messages: [...prevActiveChat.messages, messageData.message],
+            messages: [...prevActiveChat.messages, messageData.message]
           };
         });
       } else {
         console.log(
-          "User not in active room or no active chat. ActiveChat ID:",
+          'User not in active room or no active chat. ActiveChat ID:',
           activeChat?.id,
-          "Message Room ID:",
+          'Message Room ID:',
           messageData.roomId
         );
       }
@@ -167,19 +153,19 @@ export default function RoomChat() {
 
     // Listen for user joined
     socket.onUserJoined((data) => {
-      console.log("User joined:", data);
+      console.log('User joined:', data);
     });
 
     // Listen for user left
     socket.onUserLeft((data) => {
-      console.log("User left:", data);
+      console.log('User left:', data);
     });
 
     // Listen for typing indicators
     socket.onUserTyping((data) => {
       setTypingUsers((prev) => ({
         ...prev,
-        [data.userId]: data.isTyping,
+        [data.userId]: data.isTyping
       }));
 
       // Clear typing indicator after 3 seconds
@@ -187,7 +173,7 @@ export default function RoomChat() {
         setTimeout(() => {
           setTypingUsers((prev) => ({
             ...prev,
-            [data.userId]: false,
+            [data.userId]: false
           }));
         }, 3000);
       }
@@ -218,10 +204,7 @@ export default function RoomChat() {
   useEffect(() => {
     if (activeChat) {
       const updatedChat = chats.find((chat) => chat.id === activeChat.id);
-      if (
-        updatedChat &&
-        updatedChat.messages.length !== activeChat.messages.length
-      ) {
+      if (updatedChat && updatedChat.messages.length !== activeChat.messages.length) {
         setActiveChat(updatedChat);
       }
     }
@@ -231,15 +214,15 @@ export default function RoomChat() {
   const sendMessage = async (messageText, replyTo = null) => {
     if (!messageText.trim() || !activeChat) return;
 
-    console.log("Sending message:", messageText, "to room:", activeChat.id);
+    console.log('Sending message:', messageText, 'to room:', activeChat.id);
 
     const tempMessage = {
       id: Date.now() + Math.random(),
       text: messageText,
       from: USERNAME,
       timestamp: new Date().toTimeString().slice(0, 5),
-      avatar: "😊",
-      userId: USER_ID,
+      avatar: '😊',
+      userId: USER_ID
     };
 
     if (replyTo) {
@@ -250,26 +233,20 @@ export default function RoomChat() {
     // Add message to local state immediately
     setChats((prevChats) =>
       prevChats.map((chat) =>
-        chat.id === activeChat.id
-          ? { ...chat, messages: [...chat.messages, tempMessage] }
-          : chat
+        chat.id === activeChat.id ? { ...chat, messages: [...chat.messages, tempMessage] } : chat
       )
     );
 
     try {
       // Send message to API
-      const response = await chatsAPI.sendMessage(
-        activeChat.id,
-        messageText,
-        replyTo?.id || null
-      );
+      const response = await chatsAPI.sendMessage(activeChat.id, messageText, replyTo?.id || null);
 
       // Update temp message with real data
       const realMessage = {
         ...tempMessage,
         id: response.data.id,
         timestamp: new Date(response.data.createdAt).toTimeString().slice(0, 5),
-        userId: response.data.UserId,
+        userId: response.data.UserId
       };
 
       // Update local state
@@ -278,9 +255,7 @@ export default function RoomChat() {
           chat.id === activeChat.id
             ? {
                 ...chat,
-                messages: chat.messages.map((msg) =>
-                  msg.id === tempMessage.id ? realMessage : msg
-                ),
+                messages: chat.messages.map((msg) => (msg.id === tempMessage.id ? realMessage : msg))
               }
             : chat
         )
@@ -291,13 +266,13 @@ export default function RoomChat() {
         socket.sendMessage({
           roomId: activeChat.id,
           message: realMessage,
-          userId: realMessage.userId,
+          userId: realMessage.userId
         });
       }
 
       // Handle @Greets AI messages
-      if (messageText.trim().startsWith("@Greets")) {
-        const aiPrompt = messageText.replace(/^@Greets\s*/i, "").trim();
+      if (messageText.trim().startsWith('@Greets')) {
+        const aiPrompt = messageText.replace(/^@Greets\s*/i, '').trim();
 
         if (aiPrompt) {
           await handleAIMessage(aiPrompt);
@@ -306,25 +281,23 @@ export default function RoomChat() {
           const helpMessage = {
             id: Date.now() + Math.random(),
             text: "Hi! I'm Greets AI. Please provide a prompt after @Greets to get started. For example: '@Greets What's the weather like today?'",
-            from: "Greets AI",
+            from: 'Greets AI',
             timestamp: new Date().toTimeString().slice(0, 5),
-            avatar: "🤖",
-            userId: "greets_ai",
+            avatar: '🤖',
+            userId: 'greets_ai',
             isAiResponse: true,
-            isHelp: true,
+            isHelp: true
           };
 
           setChats((prevChats) =>
             prevChats.map((chat) =>
-              chat.id === activeChat.id
-                ? { ...chat, messages: [...chat.messages, helpMessage] }
-                : chat
+              chat.id === activeChat.id ? { ...chat, messages: [...chat.messages, helpMessage] } : chat
             )
           );
         }
       }
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error('Error sending message:', error);
 
       // Remove temp message on error
       setChats((prevChats) =>
@@ -332,18 +305,16 @@ export default function RoomChat() {
           chat.id === activeChat.id
             ? {
                 ...chat,
-                messages: chat.messages.filter(
-                  (msg) => msg.id !== tempMessage.id
-                ),
+                messages: chat.messages.filter((msg) => msg.id !== tempMessage.id)
               }
             : chat
         )
       );
 
       Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to send message",
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to send message'
       });
     }
   };
@@ -352,22 +323,20 @@ export default function RoomChat() {
   const handleAIMessage = async (prompt) => {
     // Add typing indicator
     const typingMessage = {
-      id: "ai_typing_" + Date.now(),
-      text: "Greets AI is thinking...",
-      from: "Greets AI",
+      id: 'ai_typing_' + Date.now(),
+      text: 'Greets AI is thinking...',
+      from: 'Greets AI',
       timestamp: new Date().toTimeString().slice(0, 5),
-      avatar: "🤖",
-      userId: "greets_ai",
+      avatar: '🤖',
+      userId: 'greets_ai',
       isAiResponse: true,
-      isTyping: true,
+      isTyping: true
     };
 
     // Show typing indicator
     setChats((prevChats) =>
       prevChats.map((chat) =>
-        chat.id === activeChat.id
-          ? { ...chat, messages: [...chat.messages, typingMessage] }
-          : chat
+        chat.id === activeChat.id ? { ...chat, messages: [...chat.messages, typingMessage] } : chat
       )
     );
 
@@ -378,15 +347,12 @@ export default function RoomChat() {
       // Create AI message
       const aiMessage = {
         id: aiResponse.data.id || Date.now() + Math.random(),
-        text:
-          aiResponse.data.text ||
-          aiResponse.data.message ||
-          "AI response received",
-        from: "Greets AI",
+        text: aiResponse.data.text || aiResponse.data.message || 'AI response received',
+        from: 'Greets AI',
         timestamp: new Date().toTimeString().slice(0, 5),
-        avatar: "🤖",
-        userId: "greets_ai",
-        isAiResponse: true,
+        avatar: '🤖',
+        userId: 'greets_ai',
+        isAiResponse: true
       };
 
       // Replace typing indicator with AI response
@@ -395,9 +361,7 @@ export default function RoomChat() {
           chat.id === activeChat.id
             ? {
                 ...chat,
-                messages: chat.messages.map((msg) =>
-                  msg.id === typingMessage.id ? aiMessage : msg
-                ),
+                messages: chat.messages.map((msg) => (msg.id === typingMessage.id ? aiMessage : msg))
               }
             : chat
         )
@@ -408,22 +372,22 @@ export default function RoomChat() {
         socket.sendMessage({
           roomId: activeChat.id,
           message: aiMessage,
-          userId: "greets_ai",
+          userId: 'greets_ai'
         });
       }
     } catch (error) {
-      console.error("AI Chat error:", error);
+      console.error('AI Chat error:', error);
 
       // Create error message
       const errorMessage = {
         id: Date.now() + Math.random(),
         text: "Sorry, I'm having trouble processing your request right now. Please try again later.",
-        from: "Greets AI",
+        from: 'Greets AI',
         timestamp: new Date().toTimeString().slice(0, 5),
-        avatar: "🤖",
-        userId: "greets_ai",
+        avatar: '🤖',
+        userId: 'greets_ai',
         isAiResponse: true,
-        isError: true,
+        isError: true
       };
 
       // Replace typing indicator with error message
@@ -432,9 +396,7 @@ export default function RoomChat() {
           chat.id === activeChat.id
             ? {
                 ...chat,
-                messages: chat.messages.map((msg) =>
-                  msg.id === typingMessage.id ? errorMessage : msg
-                ),
+                messages: chat.messages.map((msg) => (msg.id === typingMessage.id ? errorMessage : msg))
               }
             : chat
         )
@@ -448,14 +410,14 @@ export default function RoomChat() {
     const newChat = {
       id: newRoom.id,
       name: newRoom.name,
-      isGroup: newRoom.roomType === "group-chat",
-      avatar: newRoom.roomType === "group-chat" ? "👥" : "👤",
-      lastSeen: "online",
+      isGroup: newRoom.roomType === 'group-chat',
+      avatar: newRoom.roomType === 'group-chat' ? '👥' : '👤',
+      lastSeen: 'online',
       unreadCount: 0,
       isPinned: false,
       messages: [],
       roomType: newRoom.roomType,
-      description: newRoom.description,
+      description: newRoom.description
     };
 
     setChats((prev) => [newChat, ...prev]);
@@ -468,21 +430,17 @@ export default function RoomChat() {
     fetchRooms();
   };
 
-  const themeClasses = isDarkMode
-    ? "bg-gray-900 text-white"
-    : "bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 text-gray-900";
+  // Theme classes now handled in Sidebar/ChatArea via useTheme
+  // Remove old themeClasses code
 
   return (
-    <div
-      className={`flex h-screen transition-all duration-500 ${themeClasses}`}
-    >
+    <div className={`flex h-screen transition-all duration-500`}>
       <Sidebar
         chats={chats}
         activeChat={activeChat}
         setActiveChat={setActiveChat}
         setChats={setChats}
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
+        // isDarkMode and setIsDarkMode removed, now handled by context
         USERNAME={USERNAME}
         isLoading={isLoading}
         onCreateRoom={() => setShowCreateRoomModal(true)}
@@ -493,7 +451,6 @@ export default function RoomChat() {
         activeChat={activeChat}
         chats={chats}
         setChats={setChats}
-        isDarkMode={isDarkMode}
         USERNAME={USERNAME}
         USER_ID={USER_ID}
         socket={socket}
