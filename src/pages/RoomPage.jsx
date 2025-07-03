@@ -6,16 +6,19 @@ export default function RoomPage() {
   const { id } = useParams();
   const [chats, setChats] = useState([]);
   const fetchChats = async () => {
-    const response = await axios.get(`http://localhost:3000/chats/${id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-      },
-    });
+    const response = await axios.get(
+      `https://greets.tryindrahatmojo.com/chats/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      }
+    );
     setChats(response.data);
   };
   const handleSendMessage = async (message) => {
     await axios.post(
-      `http://localhost:3000/chats/${id}`,
+      `https://greets.tryindrahatmojo.com/chats/${id}`,
       { message },
       {
         headers: {
